@@ -80,7 +80,8 @@ A = 9
 - Includes source editor, run action, output console, and register panel.
 - Uses the same parser and emulator pipeline as CLI.
 - Shows parser and execution errors in the output panel with readable messages.
-- Displays source preview with first 10 lines before execution.
+- Does not echo source code in output; it shows execution results only.
+- Displays exact output in a compiler-style format (`OUTPUT`, `A`, `A_HEX`, `A_BIN`).
 
 ## Emulator behavior
 
