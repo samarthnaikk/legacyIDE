@@ -1,0 +1,1 @@
+"""LegacyIDE desktop UI package."""
