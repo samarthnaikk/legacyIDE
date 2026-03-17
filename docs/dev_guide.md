@@ -35,6 +35,12 @@ From the project root:
 python run.py examples/8051/counter.asm
 ```
 
+Launch GUI (PySide6):
+
+```bash
+python ui/app.py
+```
+
 Expected output:
 
 ```text
@@ -63,6 +69,13 @@ A = 9
 - If the file has more than 10 lines, a truncation line is printed.
 - Parse and execution failures are reported as clean user-facing errors (no traceback by default).
 
+## GUI behavior
+
+- Includes source editor, run action, output console, and register panel.
+- Uses the same parser and emulator pipeline as CLI.
+- Shows parser and execution errors in the output panel with readable messages.
+- Displays source preview with first 10 lines before execution.
+
 ## Emulator behavior
 
 - Instructions are executed sequentially.
@@ -73,7 +86,7 @@ A = 9
 
 To add a new instruction:
 
-1. Add parser recognition in `languages/asm_8051/parser.py`.
+1. Add parser recognition in `languages/asm_8051/parser/parser.py`.
 2. Add execution behavior in `languages/asm_8051/instructions/` and wire it in `instruction_set.py`.
 3. Add an example in `examples/`.
 4. Optionally update `run.py` output if additional state should be printed.
