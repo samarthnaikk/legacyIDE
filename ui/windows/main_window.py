@@ -10,9 +10,13 @@ from PySide6.QtWidgets import (
 	QWidget,
 )
 
+from languages.asm_8051.cpu.cpu import CPU
+from languages.asm_8051.instructions.instruction_set import execute_instruction
 from languages.asm_8051.instructions.instruction_set import ExecutionError
 from languages.asm_8051.language import format_exact_output, run_program
+from languages.asm_8051.parser.ast_nodes import InstructionNode
 from languages.asm_8051.parser.parser import ParserError
+from languages.asm_8051.parser.parser import parse_program
 from ..components.console import ConsoleWidget
 from ..components.status_bar import build_status_bar
 from ..components.toolbar import build_main_toolbar
@@ -26,6 +30,11 @@ class MainWindow(QMainWindow):
 	def __init__(self) -> None:
 		super().__init__()
 		self.current_file: Path | None = None
+		self._step_source_snapshot: str | None = None
+		self._step_cpu: CPU | None = None
+		self._step_instructions: list[InstructionNode] = []
+		self._step_pc: int = 0
+		self._step_finished = True
 
 		self.setWindowTitle("LegacyIDE - asm_8051")
 		self.resize(1200, 760)
@@ -42,6 +51,7 @@ class MainWindow(QMainWindow):
 			on_open=self.open_file,
 			on_save=self.save_file,
 			on_run=self.run_program,
+			on_step=self.step_program,
 		)
 		self.addToolBar(toolbar)
 		self.setStatusBar(build_status_bar())
@@ -77,6 +87,7 @@ class MainWindow(QMainWindow):
 	def new_file(self) -> None:
 		self.editor_panel.set_text("")
 		self.current_file = None
+		self._reset_step_session()
 		self.register_panel.reset()
 		self.console.clear()
 		self._update_title()
@@ -101,6 +112,7 @@ class MainWindow(QMainWindow):
 
 		self.editor_panel.set_text(source)
 		self.current_file = path
+		self._reset_step_session()
 		self._update_title()
 		self.statusBar().showMessage(f"Opened {path.name}", 2000)
 
@@ -125,8 +137,96 @@ class MainWindow(QMainWindow):
 		self._update_title()
 		self.statusBar().showMessage(f"Saved {self.current_file.name}", 2000)
 
+	def _reset_step_session(self) -> None:
+		self._step_source_snapshot = None
+		self._step_cpu = None
+		self._step_instructions = []
+		self._step_pc = 0
+		self._step_finished = True
+
+	def _render_live_output(self) -> None:
+		if self._step_cpu is None:
+			return
+		self.console.write_block(format_exact_output(self._step_cpu))
+
+	def _ensure_step_session(self, source: str) -> bool:
+		if (
+			not self._step_finished
+			and self._step_source_snapshot == source
+			and self._step_cpu is not None
+			and self._step_instructions
+		):
+			return True
+
+		try:
+			instructions = parse_program(source)
+		except ParserError as exc:
+			self.console.write_line("\nParse error:")
+			self.console.write_line(str(exc))
+			self.statusBar().showMessage("Parse error", 5000)
+			self._reset_step_session()
+			return False
+
+		self._step_source_snapshot = source
+		self._step_cpu = CPU()
+		self._step_instructions = instructions
+		self._step_pc = 0
+		self._step_finished = False
+		self.console.clear()
+		self.console.write_line("Step mode started")
+		self.register_panel.update_cpu(self._step_cpu)
+		self._render_live_output()
+		return True
+
+	def step_program(self) -> None:
+		source = self.editor_panel.text()
+		if not self._ensure_step_session(source):
+			return
+
+		if self._step_cpu is None:
+			self._reset_step_session()
+			return
+
+		if not (0 <= self._step_pc < len(self._step_instructions)):
+			self._step_finished = True
+			self.console.write_line("\nProgram finished")
+			self._render_live_output()
+			self.statusBar().showMessage("Program finished", 3000)
+			return
+
+		instruction = self._step_instructions[self._step_pc]
+		try:
+			next_pc = execute_instruction(self._step_cpu, instruction, self._step_pc)
+		except ExecutionError as exc:
+			self.console.write_line("\nExecution error:")
+			self.console.write_line(str(exc))
+			self.statusBar().showMessage("Execution error", 5000)
+			self._step_finished = True
+			return
+
+		self.console.write_line(
+			f"Step line {instruction.line_number}: {instruction.opcode}"
+		)
+		self.register_panel.update_cpu(self._step_cpu)
+		self.console.write_line("")
+		self._render_live_output()
+
+		if next_pc == -1:
+			self._step_finished = True
+			self._step_pc = len(self._step_instructions)
+			self.console.write_line("\nProgram finished")
+			self.statusBar().showMessage("Program finished", 3000)
+			return
+
+		self._step_pc = next_pc
+		if not (0 <= self._step_pc < len(self._step_instructions)):
+			self._step_finished = True
+			self.console.write_line("\nProgram finished")
+			self.statusBar().showMessage("Program finished", 3000)
+
 	def run_program(self) -> None:
 		source = self.editor_panel.text()
+		self._reset_step_session()
 		self.console.clear()
 		self.console.write_line("Running program...")
 

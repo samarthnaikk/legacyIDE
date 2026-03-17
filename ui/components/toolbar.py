@@ -11,6 +11,7 @@ def build_main_toolbar(
 	on_open: Callable[[], None],
 	on_save: Callable[[], None],
 	on_run: Callable[[], None],
+	on_step: Callable[[], None],
 ) -> QToolBar:
 	toolbar = QToolBar("Main")
 	toolbar.setMovable(False)
@@ -32,5 +33,9 @@ def build_main_toolbar(
 	run_action = QAction("Run", parent)
 	run_action.triggered.connect(on_run)
 	toolbar.addAction(run_action)
+
+	step_action = QAction("Step", parent)
+	step_action.triggered.connect(on_step)
+	toolbar.addAction(step_action)
 
 	return toolbar
