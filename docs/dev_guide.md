@@ -41,6 +41,12 @@ Launch GUI (PySide6):
 python ui/app.py
 ```
 
+Alternative launch mode:
+
+```bash
+python -m ui.app
+```
+
 Expected output:
 
 ```text

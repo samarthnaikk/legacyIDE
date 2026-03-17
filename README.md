@@ -23,6 +23,12 @@ Launch the PySide6 desktop interface:
 python ui/app.py
 ```
 
+Alternative module mode:
+
+```bash
+python -m ui.app
+```
+
 ---
 
 # Overview
