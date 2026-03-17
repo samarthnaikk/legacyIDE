@@ -1,0 +1,3 @@
+MOV A,#5
+ADD A,#3
+INC A
