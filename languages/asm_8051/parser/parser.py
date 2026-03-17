@@ -11,10 +11,20 @@ class ParserError(ValueError):
 
 
 _MOV_RE = re.compile(r"^MOV\s+(?:A\s*,\s*)?#(.+)$", re.IGNORECASE)
+_MOV_R_IMM_RE = re.compile(r"^MOV\s+R([0-7])\s*,\s*#(.+)$", re.IGNORECASE)
+_MOV_R_A_RE = re.compile(r"^MOV\s+R([0-7])\s*,\s*A$", re.IGNORECASE)
 _ADD_RE = re.compile(r"^ADD\s+A\s*,\s*#(.+)$", re.IGNORECASE)
-_SINGLE_TOKEN_RE = re.compile(r"^(INC|DEC|CPL)\s+A$", re.IGNORECASE)
+_ADD_A_R_RE = re.compile(r"^ADD\s+A\s*,\s*R([0-7])$", re.IGNORECASE)
+_INC_A_RE = re.compile(r"^INC\s+A$", re.IGNORECASE)
+_INC_R_RE = re.compile(r"^INC\s+R([0-7])$", re.IGNORECASE)
+_DEC_A_RE = re.compile(r"^DEC\s+A$", re.IGNORECASE)
+_DEC_R_RE = re.compile(r"^DEC\s+R([0-7])$", re.IGNORECASE)
+_CPL_A_RE = re.compile(r"^CPL\s+A$", re.IGNORECASE)
 _LABEL_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$")
 _ORG_RE = re.compile(r"^ORG\s+(.+)$", re.IGNORECASE)
+_END_RE = re.compile(r"^END(?:\s+.*)?$", re.IGNORECASE)
+_JNZ_RE = re.compile(r"^JNZ\s+([A-Za-z_][A-Za-z0-9_]*)$", re.IGNORECASE)
+_SJMP_RE = re.compile(r"^SJMP\s+([A-Za-z_][A-Za-z0-9_]*)$", re.IGNORECASE)
 _SUPPORTED_MNEMONICS = ["MOV", "ADD", "INC", "DEC", "CPL"]
 _SUPPORTED_DIRECTIVES = ["ORG"]
 _KNOWN_MNEMONICS = list(INSTRUCTIONS)
@@ -105,6 +115,33 @@ def parse_program(assembly_text: str) -> list[InstructionNode]:
 			_parse_value(org_match.group(1), line_number=line_number, instruction="ORG")
 			continue
 
+		if _END_RE.match(stripped):
+			break
+
+		mov_r_imm_match = _MOV_R_IMM_RE.match(stripped)
+		if mov_r_imm_match:
+			instructions.append(
+				InstructionNode(
+					opcode="MOV",
+					register=int(mov_r_imm_match.group(1)),
+					operand=_parse_value(mov_r_imm_match.group(2), line_number=line_number, instruction="MOV"),
+					line_number=line_number,
+				)
+			)
+			continue
+
+		mov_r_a_match = _MOV_R_A_RE.match(stripped)
+		if mov_r_a_match:
+			instructions.append(
+				InstructionNode(
+					opcode="MOV",
+					register=int(mov_r_a_match.group(1)),
+					source="A",
+					line_number=line_number,
+				)
+			)
+			continue
+
 		mov_match = _MOV_RE.match(stripped)
 		if mov_match:
 			instructions.append(
@@ -127,11 +164,68 @@ def parse_program(assembly_text: str) -> list[InstructionNode]:
 			)
 			continue
 
-		single_token_match = _SINGLE_TOKEN_RE.match(stripped)
-		if single_token_match:
-			instructions.append(InstructionNode(opcode=single_token_match.group(1).upper(), line_number=line_number))
+		add_a_r_match = _ADD_A_R_RE.match(stripped)
+		if add_a_r_match:
+			instructions.append(
+				InstructionNode(opcode="ADD", register=int(add_a_r_match.group(1)), line_number=line_number)
+			)
+			continue
+
+		inc_a_match = _INC_A_RE.match(stripped)
+		if inc_a_match:
+			instructions.append(InstructionNode(opcode="INC", line_number=line_number))
+			continue
+
+		inc_r_match = _INC_R_RE.match(stripped)
+		if inc_r_match:
+			instructions.append(InstructionNode(opcode="INC", register=int(inc_r_match.group(1)), line_number=line_number))
+			continue
+
+		dec_a_match = _DEC_A_RE.match(stripped)
+		if dec_a_match:
+			instructions.append(InstructionNode(opcode="DEC", line_number=line_number))
+			continue
+
+		dec_r_match = _DEC_R_RE.match(stripped)
+		if dec_r_match:
+			instructions.append(InstructionNode(opcode="DEC", register=int(dec_r_match.group(1)), line_number=line_number))
+			continue
+
+		cpl_a_match = _CPL_A_RE.match(stripped)
+		if cpl_a_match:
+			instructions.append(InstructionNode(opcode="CPL", line_number=line_number))
+			continue
+
+		jnz_match = _JNZ_RE.match(stripped)
+		if jnz_match:
+			instructions.append(InstructionNode(opcode="JNZ", label=jnz_match.group(1).upper(), line_number=line_number))
+			continue
+
+		sjmp_match = _SJMP_RE.match(stripped)
+		if sjmp_match:
+			instructions.append(InstructionNode(opcode="SJMP", label=sjmp_match.group(1).upper(), line_number=line_number))
 			continue
 
 		raise _unsupported_instruction_error(line_number, stripped)
+
+	for index, instruction in enumerate(instructions):
+		if instruction.opcode not in ("JNZ", "SJMP"):
+			continue
+
+		if instruction.label is None:
+			raise ParserError(f"Line {instruction.line_number}: missing label for {instruction.opcode}")
+
+		if instruction.label not in labels:
+			raise ParserError(f"Line {instruction.line_number}: unknown label '{instruction.label}'")
+
+		instructions[index] = InstructionNode(
+			opcode=instruction.opcode,
+			operand=instruction.operand,
+			register=instruction.register,
+			source=instruction.source,
+			label=instruction.label,
+			target=labels[instruction.label],
+			line_number=instruction.line_number,
+		)
 
 	return instructions
