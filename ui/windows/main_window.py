@@ -13,13 +13,13 @@ from PySide6.QtWidgets import (
 from languages.asm_8051.instructions.instruction_set import ExecutionError
 from languages.asm_8051.language import run_program
 from languages.asm_8051.parser.parser import ParserError
-from ui.components.console import ConsoleWidget
-from ui.components.status_bar import build_status_bar
-from ui.components.toolbar import build_main_toolbar
-from ui.panels.editor_panel import EditorPanel
-from ui.panels.memory_panel import MemoryPanel
-from ui.panels.port_panel import PortPanel
-from ui.panels.register_panel import RegisterPanel
+from ..components.console import ConsoleWidget
+from ..components.status_bar import build_status_bar
+from ..components.toolbar import build_main_toolbar
+from ..panels.editor_panel import EditorPanel
+from ..panels.memory_panel import MemoryPanel
+from ..panels.port_panel import PortPanel
+from ..panels.register_panel import RegisterPanel
 
 
 class MainWindow(QMainWindow):
