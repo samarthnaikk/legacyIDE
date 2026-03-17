@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from languages.asm_8051.instructions.instruction_set import ExecutionError
-from languages.asm_8051.language import run_program
+from languages.asm_8051.language import format_exact_output, run_program
 from languages.asm_8051.parser.parser import ParserError
 from ..components.console import ConsoleWidget
 from ..components.status_bar import build_status_bar
@@ -74,13 +74,6 @@ class MainWindow(QMainWindow):
 		QMessageBox.critical(self, title, message)
 		self.statusBar().showMessage(message, 5000)
 
-	def _source_preview(self, source: str, max_lines: int = 10) -> str:
-		lines = source.splitlines()
-		preview = lines[:max_lines]
-		if len(lines) > max_lines:
-			preview.append(f"... ({len(lines) - max_lines} more line(s) not shown)")
-		return "\n".join(preview) if preview else "(empty file)"
-
 	def new_file(self) -> None:
 		self.editor_panel.set_text("")
 		self.current_file = None
@@ -135,8 +128,7 @@ class MainWindow(QMainWindow):
 	def run_program(self) -> None:
 		source = self.editor_panel.text()
 		self.console.clear()
-		self.console.write_line("Running program...\n")
-		self.console.write_block(self._source_preview(source))
+		self.console.write_line("Running program...")
 
 		try:
 			cpu = run_program(source)
@@ -158,5 +150,5 @@ class MainWindow(QMainWindow):
 
 		self.register_panel.update_cpu(cpu)
 		self.console.write_line("\nProgram finished\n")
-		self.console.write_line(f"A = {cpu.a}")
+		self.console.write_block(format_exact_output(cpu))
 		self.statusBar().showMessage("Program finished", 3000)
