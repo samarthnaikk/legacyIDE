@@ -66,7 +66,7 @@ def execute_instruction(cpu: CPU, instruction: InstructionNode, current_pc: int)
 	if instruction.opcode == "JNZ":
 		if instruction.target is None:
 			raise ExecutionError(f"{_line_prefix(instruction)}JNZ requires a resolved label target")
-		if cpu.a != 0:
+		if not cpu.z:
 			return instruction.target
 		return current_pc + 1
 

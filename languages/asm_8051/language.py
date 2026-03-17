@@ -17,11 +17,14 @@ def run_program_file(path: str | Path):
 
 def format_exact_output(cpu: CPU) -> str:
 	"""Return deterministic compiler-style output for current CPU state."""
+	register_lines = [f"R{index} = {value} (0x{value:02X})" for index, value in enumerate(cpu.r)]
 	return "\n".join(
 		[
 			"OUTPUT:",
 			f"A = {cpu.a}",
 			f"A_HEX = 0x{cpu.a:02X}",
 			f"A_BIN = 0b{cpu.a:08b}",
+			f"Z = {int(cpu.z)}",
+			*register_lines,
 		]
 	)
