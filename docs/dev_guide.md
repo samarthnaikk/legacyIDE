@@ -19,19 +19,20 @@ assembly file -> parser -> instruction list -> emulator -> CPU state
 ## Project files
 
 - `run.py`: CLI entrypoint that loads an assembly file, parses, executes, and prints CPU state
-- `examples/test.asm`: minimal sample input program
-- `languages/asm_8051/cpu.py`: minimal CPU state (`A` register)
-- `languages/asm_8051/instructions.py`: instruction representation
-- `languages/asm_8051/parser.py`: parser for supported instruction subset
-- `languages/asm_8051/instruction_logic.py`: instruction execution logic
-- `languages/asm_8051/emulator.py`: sequential instruction execution engine
+- `examples/8051/counter.asm`: minimal sample input program
+- `languages/asm_8051/cpu/cpu.py`: minimal CPU state (`A` register)
+- `languages/asm_8051/parser/ast_nodes.py`: instruction node representation
+- `languages/asm_8051/parser/parser.py`: parser for supported instruction subset
+- `languages/asm_8051/instructions/instruction_set.py`: instruction dispatcher and execution entrypoint
+- `languages/asm_8051/emulator/execution_engine.py`: sequential instruction execution loop
+- `languages/asm_8051/language.py`: parser and emulator integration
 
 ## How to use
 
 From the project root:
 
 ```bash
-python run.py examples/test.asm
+python run.py examples/8051/counter.asm
 ```
 
 Expected output:
@@ -53,20 +54,27 @@ A = 9
 - Lines are processed in order.
 - Empty lines are ignored.
 - Inline comments starting with `;` are ignored.
-- Any unsupported instruction raises a `ParserError` with line context.
+- Unsupported mnemonics raise a `ParserError` with line context and typo suggestions when possible.
+- Invalid immediates report the exact failing line and instruction form.
+
+## CLI behavior
+
+- The runner prints only the first 10 lines of the source file as preview.
+- If the file has more than 10 lines, a truncation line is printed.
+- Parse and execution failures are reported as clean user-facing errors (no traceback by default).
 
 ## Emulator behavior
 
 - Instructions are executed sequentially.
 - Register `A` is always stored as 8-bit (`0..255`) using wrap-around behavior.
-- All instruction semantics are implemented in `instruction_logic.py` to keep CPU state and operation logic separate.
+- Instruction semantics are implemented under `languages/asm_8051/instructions/` to keep CPU state and operation logic separate.
 
 ## Extending instruction support
 
 To add a new instruction:
 
 1. Add parser recognition in `languages/asm_8051/parser.py`.
-2. Add execution behavior in `languages/asm_8051/instruction_logic.py`.
+2. Add execution behavior in `languages/asm_8051/instructions/` and wire it in `instruction_set.py`.
 3. Add an example in `examples/`.
 4. Optionally update `run.py` output if additional state should be printed.
 
