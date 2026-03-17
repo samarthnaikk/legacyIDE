@@ -3,6 +3,8 @@ from pathlib import Path
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QPlainTextEdit, QVBoxLayout, QWidget
 
+from core.editor.syntax_highlighter import Asm8051SyntaxHighlighter
+
 
 class EditorPanel(QWidget):
 	def __init__(self, parent=None) -> None:
@@ -11,6 +13,7 @@ class EditorPanel(QWidget):
 		self.editor = QPlainTextEdit(self)
 		self.editor.setPlaceholderText("Write 8051 assembly here...")
 		self.editor.setFont(QFont("Menlo", 12))
+		self.highlighter = Asm8051SyntaxHighlighter(self.editor.document())
 
 		layout = QVBoxLayout()
 		layout.setContentsMargins(0, 0, 0, 0)
