@@ -3,6 +3,28 @@
 
 ---
 
+# Quick Start
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run the CLI sample:
+
+```bash
+python run.py examples/8051/counter.asm
+```
+
+Launch the PySide6 desktop interface:
+
+```bash
+python ui/app.py
+```
+
+---
+
 # Overview
 
 LegacyIDE is a lightweight development environment designed to make it easy to write, run, and experiment with programming languages that are typically difficult to access on modern systems. Many classic or embedded languages require specialized compilers, proprietary IDEs, or outdated software environments. LegacyIDE aims to remove those barriers by providing a unified platform where such languages can be executed through built-in emulation and interpretation.
