@@ -1,6 +1,8 @@
 import re
 from difflib import get_close_matches
 
+from languages.asm_8051.metadata.syntax_rules import INSTRUCTIONS
+
 from .ast_nodes import InstructionNode
 
 
@@ -11,7 +13,9 @@ class ParserError(ValueError):
 _MOV_RE = re.compile(r"^MOV\s+A\s*,\s*#(.+)$", re.IGNORECASE)
 _ADD_RE = re.compile(r"^ADD\s+A\s*,\s*#(.+)$", re.IGNORECASE)
 _SINGLE_TOKEN_RE = re.compile(r"^(INC|DEC|CPL)\s+A$", re.IGNORECASE)
+_LABEL_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$")
 _SUPPORTED_MNEMONICS = ["MOV", "ADD", "INC", "DEC", "CPL"]
+_KNOWN_MNEMONICS = list(INSTRUCTIONS)
 
 
 def _parse_value(raw_value: str, *, line_number: int, instruction: str) -> int:
@@ -26,7 +30,13 @@ def _parse_value(raw_value: str, *, line_number: int, instruction: str) -> int:
 
 def _unsupported_instruction_error(line_number: int, stripped: str) -> ParserError:
 	mnemonic = stripped.split(maxsplit=1)[0].rstrip(",").upper()
-	suggestion = get_close_matches(mnemonic, _SUPPORTED_MNEMONICS, n=1, cutoff=0.6)
+	if mnemonic in _KNOWN_MNEMONICS and mnemonic not in _SUPPORTED_MNEMONICS:
+		return ParserError(
+			f"Line {line_number}: instruction '{mnemonic}' is recognized but not yet executable in this minimal runtime. "
+			f"Currently executable mnemonics: {', '.join(_SUPPORTED_MNEMONICS)}"
+		)
+
+	suggestion = get_close_matches(mnemonic, _KNOWN_MNEMONICS, n=1, cutoff=0.6)
 	if suggestion:
 		return ParserError(
 			f"Line {line_number}: unsupported instruction '{stripped}'. Did you mean '{suggestion[0]}'?"
@@ -39,9 +49,27 @@ def _unsupported_instruction_error(line_number: int, stripped: str) -> ParserErr
 
 def parse_program(assembly_text: str) -> list[InstructionNode]:
 	instructions: list[InstructionNode] = []
+	labels: dict[str, int] = {}
 
 	for line_number, raw_line in enumerate(assembly_text.splitlines(), start=1):
 		stripped = raw_line.split(";", 1)[0].strip()
+		if not stripped:
+			continue
+
+		while True:
+			label_match = _LABEL_RE.match(stripped)
+			if not label_match:
+				break
+
+			label_name = label_match.group(1).upper()
+			if label_name in labels:
+				raise ParserError(f"Line {line_number}: duplicate label '{label_name}'")
+
+			labels[label_name] = len(instructions)
+			stripped = label_match.group(2).strip()
+			if not stripped:
+				break
+
 		if not stripped:
 			continue
 
